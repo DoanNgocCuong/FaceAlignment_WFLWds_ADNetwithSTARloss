@@ -285,21 +285,6 @@ def forward_backward(config, train_loader, net_module, net, net_ema, criterions,
         ave_losses = list(map(sum, zip(ave_losses, losses))) 
         # ave_losses chứa giá trị trung bình cộng tích lũy của loss từ đầu epoch đến thời điểm hiện tại.
 
-        # Log các chỉ số loss với wandb - bug: NameError: name 'wandb' is not defined
-        # wandb.log({"Average Loss sum/len": sum(losses) / len(losses), "Iteration": iter})
-        # wandb.log({"Average STARLoss_v2 sum/len": sum(losses) / len(losses)})
-        # giá trị trung bình của loss trong iteration hiện tại, không phải là trung bình cộng tích lũy.
-        # Điều này hữu ích nếu bạn muốn theo dõi sự thay đổi và biến động của loss sau mỗi iteration một cách chi tiết hơn.
-
-        # Log toàn bộ các chỉ số L1, L2, L3, ... lên wandb, 
-        # cần chuyển các giá trị loss tương ứng vào trong hàm wandb.log như một dictionary
-        # Trước hàm backward, sau khi tính toán được losses
-        losses_dict = {f"L{i}_Train": loss for i, loss in enumerate(losses)}
-        losses_dict["Average STARLoss_v2 Trai(sum/len)"] = sum(losses) / len(losses) # wandb.log({"Average STARLoss_v2 sum/len": sum(losses) / len(losses)})
-        wandb.log(losses_dict) # mỗi loss L0, L1, L2, ... sẽ được log riêng biệt và có thể được theo dõi qua từng iteration trên giao diện
-        # mô hình của bạn được thiết kế để dự đoán nhiều điểm đặc trưng trên khuôn mặt (ví dụ: góc của mắt, đỉnh của mũi, góc của miệng, v.v.), 
-        # thì mỗi Lx có thể đại diện cho loss của từng điểm đặc trưng đó. 
-
         # backward
         optimizer.zero_grad()
         with torch.autograd.detect_anomaly():
@@ -322,6 +307,21 @@ def forward_backward(config, train_loader, net_module, net, net_ema, criterions,
                 config.logger.info(
                     ' -->>[{:03d}/{:03d}][{:03d}/{:03d}]'.format(epoch, config.max_epoch, iter, iter_num) \
                     + last_time + losses_str)
+
+                # Log các chỉ số loss với wandb - bug: NameError: name 'wandb' is not defined
+                # wandb.log({"Average Loss sum/len": sum(losses) / len(losses), "Iteration": iter})
+                # wandb.log({"Average STARLoss_v2 sum/len": sum(losses) / len(losses)})
+                # giá trị trung bình của loss trong iteration hiện tại, không phải là trung bình cộng tích lũy.
+                # Điều này hữu ích nếu bạn muốn theo dõi sự thay đổi và biến động của loss sau mỗi iteration một cách chi tiết hơn.
+
+                # Log toàn bộ các chỉ số L1, L2, L3, ... lên wandb, 
+                # cần chuyển các giá trị loss tương ứng vào trong hàm wandb.log như một dictionary
+                # Trước hàm backward, sau khi tính toán được losses
+                losses_dict = {f"L{i}_Train": loss for i, loss in enumerate(losses)}
+                losses_dict["Average STARLoss_v2 Trai(sum/len)"] = sum(losses) / len(losses) # wandb.log({"Average STARLoss_v2 sum/len": sum(losses) / len(losses)})
+                wandb.log(losses_dict) # mỗi loss L0, L1, L2, ... sẽ được log riêng biệt và có thể được theo dõi qua từng iteration trên giao diện
+                # mô hình của bạn được thiết kế để dự đoán nhiều điểm đặc trưng trên khuôn mặt (ví dụ: góc của mắt, đỉnh của mũi, góc của miệng, v.v.), 
+                # thì mỗi Lx có thể đại diện cho loss của từng điểm đặc trưng đó. 
 
     epoch_end_time = time.time()
     epoch_total_time = epoch_end_time - epoch_start_time
@@ -379,3 +379,4 @@ def save_model(config, epoch, net, net_ema, optimizer, scheduler, pytorch_model_
     torch.save(state, pytorch_model_path)
     if config.logger is not None:
         config.logger.info("Epoch: %d/%d, model saved in this epoch" % (epoch, config.max_epoch))
+        

@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 from lib import utility
 from lib.utils import AverageMeter, convert_secs2time
+import wandb
 
 os.environ["MKL_THREADING_LAYER"] = "GNU"
 
@@ -143,6 +144,17 @@ def train_worker(world_rank, world_size, nodes_size, args):
                                     "Val_{}/Metric{:3d} in this epoch: [NME {:.6f}, FR {:.6f}, AUC {:.6f}]".format(
                                         net_name, k, metric[0], metric[1], metric[2]))
 
+                                # Trong hàm validation sau khi đã có được các metrics
+                                # Phần wandb.log(...) cần một dictionary của các giá trị để log
+                                # Tránh nan bằng cách kiểm tra giá trị trước khi log
+                                if metric[0] is not None and metric[1] is not None and metric[2] is not None:
+                                    wandb.log({
+                                        f"Val_{net_name}/Metric{k}/NME": metric[0],
+                                        f"Val_{net_name}/Metric{k}/FR": metric[1],
+                                        f"Val_{net_name}/Metric{k}/AUC": metric[2]
+                                    })
+
+
                         # update best model.
                         cur_metric = metrics[config.key_metric_index][0]
                         if best_metric is None or best_metric > cur_metric:
@@ -158,9 +170,20 @@ def train_worker(world_rank, world_size, nodes_size, args):
                                 optimizer,
                                 scheduler,
                                 current_pytorch_model_path)
+                            # hàm save_model được define trong lib/utility.py để lưu model
+                            # Trong đó có config.logger.info("Epoch: %d/%d, model saved in this epoch" % (epoch, config.max_epoch))
+                            config.logger.info("Best model is saved as {current_pytorch_model_path}")
+
                     if best_metric is not None:
                         config.logger.info(
                             "Val/Best_Metric%03d in this epoch: %.6f" % (config.key_metric_index, best_metric))
+                        
+                        # Trong hàm validation sau khi đã có được các metrics
+                        wandb.log({
+                            f"Val/Best_Metric{config.key_metric_index}": best_metric
+                        })
+
+
                     eval_time.update(time.time() - eval_start_time)
 
                 # saving model
@@ -175,6 +198,13 @@ def train_worker(world_rank, world_size, nodes_size, args):
                         optimizer,
                         scheduler,
                         current_pytorch_model_path)
+                    
+                    # Sau khi tìm được model tốt nhất và trước khi kết thúc quá trình training hoặc validation
+                    # model_checkpoint_path = "best_model.pth"  # Thay thế với đường dẫn tới model của bạn
+                    artifact = wandb.Artifact('ADNetSTARLoss_bestmodel', type='model') # Tạo 1 đối tượng artifact với tên, type
+                    artifact.add_file(current_pytorch_model_path) # Thêm file best_model vào artifact
+                    wandb.log_artifact(artifact) # Push artifact lên wandb
+
 
                 if world_size > 1:
                     torch.distributed.barrier()

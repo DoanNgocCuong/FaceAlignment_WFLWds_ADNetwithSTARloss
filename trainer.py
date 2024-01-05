@@ -1,3 +1,4 @@
+
 import os
 import sys
 import time
@@ -76,15 +77,17 @@ def train_worker(world_rank, world_size, nodes_size, args):
     scheduler = utility.get_scheduler(config, optimizer)
 
     # load pretrain model
+    # check có --pretrained_weights ko?
     if args.pretrained_weight is not None:
         if not os.path.exists(args.pretrained_weight):
             pretrained_weight = os.path.join(config.work_dir, args.pretrained_weight)
         else:
             pretrained_weight = args.pretrained_weight
 
-        try:
+        # Load the pretrained weights 
+        try: # torch.load nạp trọng số đã lưu
             checkpoint = torch.load(pretrained_weight)
-            net.load_state_dict(checkpoint["net"], strict=False)
+            net.load_state_dict(checkpoint["net"], strict=False) # strict=False cho phép load model ko cần khớp hoàn toàn
             if net_ema is not None:
                 net_ema.load_state_dict(checkpoint["net_ema"], strict=False)
             if config.logger is not None:
@@ -92,6 +95,13 @@ def train_worker(world_rank, world_size, nodes_size, args):
             start_epoch = checkpoint["epoch"]
             optimizer.load_state_dict(checkpoint["optimizer"])
             scheduler.load_state_dict(checkpoint["scheduler"])
+            
+            # utility.save_model(config, epoch, best_net, net_ema, optimizer, scheduler,
+            #                     current_pytorch_model_path)
+            # config là một đối tượng được sử dụng để lưu các cấu hình liên quan đến việc đào tạo mô hình. 
+            # Trong trường hợp này, nó được sử dụng để lưu thông tin như địa chỉ của tệp log và các cài đặt khác.
+
+
         except:
             start_epoch = 0
             if config.logger is not None:
@@ -116,7 +126,7 @@ def train_worker(world_rank, world_size, nodes_size, args):
         os.makedirs(config.model_dir)
 
     # training
-    best_metric, best_net = None, None
+    best_metric, best_net = None, None # best_net, best_metric cho việc save best_model
     epoch_time, eval_time = AverageMeter(), AverageMeter()
     for i_epoch, epoch in enumerate(range(config.max_epoch + 1)):
         try:
@@ -161,9 +171,9 @@ def train_worker(world_rank, world_size, nodes_size, args):
                         cur_metric = metrics[config.key_metric_index][0]
                         if best_metric is None or best_metric > cur_metric:
                             best_metric = cur_metric
-                            best_net = epoch_net
+                            best_net = epoch_net # epoch_net: mô hình mạng nơ-ron sau mỗi epoch huấn luyện.
                             current_pytorch_model_path = os.path.join(config.model_dir, "best_model.pkl")
-                            # current_onnx_model_path = os.path.join(config.model_dir, "train.onnx")
+                            current_onnx_model_path = os.path.join(config.model_dir, "train.onnx")
                             utility.save_model(
                                 config,
                                 epoch,
@@ -171,8 +181,8 @@ def train_worker(world_rank, world_size, nodes_size, args):
                                 net_ema,
                                 optimizer,
                                 scheduler,
-                                current_pytorch_model_path)
-                            
+                                current_pytorch_model_path)                   
+                            # best_net mô hình mạng nơ-ron tốt nhất sau mỗi epoch huấn luyện. (best_net=epoch_net)
                             '''
 2024-01-05 05:53:12,727 INFO    : Val_net/Metric 10 in this epoch: [NME nan, FR nan, AUC nan]
 2024-01-05 05:53:12,727 INFO    : Val_net/Metric 11 in this epoch: [NME nan, FR nan, AUC nan]
@@ -206,7 +216,10 @@ def train_worker(world_rank, world_size, nodes_size, args):
 
                     eval_time.update(time.time() - eval_start_time)
 
-                # saving model
+                # saving model (Doan Ngoc Cuong: when epcoh đạt max hoặc...)
+                # Đoạn trên thì save best model và Cuong đã thêm load best model to wandb
+                # ở trên để 'best_net' còn ở dưới để 'net', sự ko đồng bộ này ảnh hưởng đến việc xài pretrained_model
+
                 if epoch == config.max_epoch and world_rank == 0:
                     current_pytorch_model_path = os.path.join(config.model_dir, "last_model.pkl")
                     # current_onnx_model_path = os.path.join(config.model_dir, "model_epoch_%s.onnx" % epoch)

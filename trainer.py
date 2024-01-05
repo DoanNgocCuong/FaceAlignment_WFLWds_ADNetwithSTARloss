@@ -147,12 +147,14 @@ def train_worker(world_rank, world_size, nodes_size, args):
                                 # Trong hàm validation sau khi đã có được các metrics
                                 # Phần wandb.log(...) cần một dictionary của các giá trị để log
                                 # Tránh nan bằng cách kiểm tra giá trị trước khi log
-                                if metric[0] is not None and metric[1] is not None and metric[2] is not None:
-                                    wandb.log({
-                                        f"Val_{net_name}/Metric{k}/NME": metric[0],
-                                        f"Val_{net_name}/Metric{k}/FR": metric[1],
-                                        f"Val_{net_name}/Metric{k}/AUC": metric[2]
-                                    })
+
+                                # SẼ KO LOG ĐOẠN NÀY NỮA, VÌ MỖI CÁI Val_net/Metric 0->11 chứa hẳn 3 metrics, log vào wandb đồ thị bị loạn
+                                # if metric[0] is not None and metric[1] is not None and metric[2] is not None:
+                                #     wandb.log({
+                                #         f"Val_{net_name}/Metric{k}/NME": metric[0],
+                                #         f"Val_{net_name}/Metric{k}/FR": metric[1],
+                                #         f"Val_{net_name}/Metric{k}/AUC": metric[2]
+                                #     })
 
 
                         # update best model.
@@ -170,9 +172,23 @@ def train_worker(world_rank, world_size, nodes_size, args):
                                 optimizer,
                                 scheduler,
                                 current_pytorch_model_path)
+                            
+                            '''
+2024-01-05 05:53:12,727 INFO    : Val_net/Metric 10 in this epoch: [NME nan, FR nan, AUC nan]
+2024-01-05 05:53:12,727 INFO    : Val_net/Metric 11 in this epoch: [NME nan, FR nan, AUC nan]
+2024-01-05 05:53:13,621 INFO    : Epoch: 1/1, model saved in this epoch
+2024-01-05 05:53:13,624 INFO    : Best model is saved as {current_pytorch_model_path}
+2024-01-05 05:53:17,647 DEBUG   : Starting new HTTPS connection (1): api.wandb.ai:443
+2024-01-05 05:53:17,809 DEBUG   : https://api.wandb.ai:443 "POST /graphql HTTP/1.1" 200 None
+2024-01-05 05:53:17,849 INFO    : Forward process, Dataset size: 2499, Batch size: 4
+100% 625/625 [04:25<00:00,  2.35it/s]
+2024-01-05 05:57:44,787 INFO    : Val_net_ema/Metric  0 in this epoch: [NME 0.697380, FR 1.000000, AUC 0.000000]
+2024-01-05 05:57:44,788 INFO    : Val_net_ema/Metric  1 in this epoch: [NME nan, FR nan, AUC nan]
+                         
+                            '''
                             # hàm save_model được define trong lib/utility.py để lưu model
                             # Trong đó có config.logger.info("Epoch: %d/%d, model saved in this epoch" % (epoch, config.max_epoch))
-                            config.logger.info("Best model is saved as {current_pytorch_model_path}")
+                            config.logger.info(f"Best model is saved as {current_pytorch_model_path}")
 
                             # Sau khi tìm được model tốt nhất và trước khi kết thúc quá trình training hoặc validation
                             # model_checkpoint_path = "best_model.pth"  # Thay thế với đường dẫn tới model của bạn
@@ -182,13 +198,11 @@ def train_worker(world_rank, world_size, nodes_size, args):
 
                     if best_metric is not None:
                         config.logger.info(
-                            "Val/Best_Metric%03d in this epoch: %.6f" % (config.key_metric_index, best_metric))
+                            "Val/Best_Metric at epoch %03d in this epoch: %.6f" % (config.key_metric_index, best_metric))
                         
                         # Trong hàm validation sau khi đã có được các metrics
-                        wandb.log({
-                            f"Val/Best_Metric{config.key_metric_index}": best_metric
-                        })
-
+                        # wandb.log({f"Val/Best_Metric at epoch {config.key_metric_index}": best_metric})
+                        wandb.log({"Val/Best_Metric at epoch {:03d}".format(config.key_metric_index): best_metric})
 
                     eval_time.update(time.time() - eval_start_time)
 

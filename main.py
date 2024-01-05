@@ -35,21 +35,28 @@ def add_train_options(parser):
     group.add_argument("--val_num_workers", type=int, default=None, help="the num of workers in val process")
 
     # Doan Ngoc Cuong add --pretrained_weights
-    group.add_argument("--pretrained_weights", type=str, default=None, help="path to pretrained weights")
-
+    # Bug: Viết thừa 1 chữ s
+    # group.add_argument("--pretrained_weights", type=str, default=None, help="path to pretrained weights")
+    # group.add_argument("--pretrained_weight", type=str, default=None, help="path to pretrained weights")
 
 def add_eval_options(parser):
     group = parser.add_argument_group("eval")
-    group.add_argument("--pretrained_weight", type=str, default=None,
-                       help="set pretrained model file name, if ignored then train the network without pretrain model")
+    # group.add_argument("--pretrained_weight", type=str, default=None, help="set pretrained model file name, if ignored then train the network without pretrain model")
     group.add_argument('--norm_type', type=str, default='default', help='default, ocular, pupil')
     group.add_argument('--test_file', type=str, default="test.tsv", help='for wflw, test.tsv/test_xx_metadata.tsv')
 
+# Doan Ngoc Cuong code # argparse.ArgumentError: argument --pretrained_weight: conflicting option string: --pretrained_weight
+# def giải quyết xung đột khi có cả 2 đối số argument --pretrained_weights trong cả train và eval
+def add_pretrained_weight_option(parser): # Gọi hàm ở dưới __main__
+    group = parser.add_argument_group('pretrained')
+    group.add_argument("--pretrained_weight", type=str, default=None,
+                       help="path to pretrained weights")
 
 def add_starloss_options(parser):
     group = parser.add_argument_group('starloss')
     group.add_argument('--star_w', type=float, default=1, help="regular loss ratio")
     group.add_argument('--star_dist', type=str, default='smoothl1', help='STARLoss distance function')
+
 
 
 if __name__ == "__main__":
@@ -59,7 +66,7 @@ if __name__ == "__main__":
     add_train_options(parser)
     add_eval_options(parser)
     add_starloss_options(parser)
-
+    add_pretrained_weight_option(parser)  # Doan Ngoc Cuong Gọi ở đây
     args = parser.parse_args()
 
     # `try...except...finally` (finally: thực thi một đoạn mã không kể đến việc trước đó có xảy ra ngoại lệ hay không)

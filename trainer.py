@@ -100,7 +100,9 @@ def train_worker(world_rank, world_size, nodes_size, args):
             #                     current_pytorch_model_path)
             # config là một đối tượng được sử dụng để lưu các cấu hình liên quan đến việc đào tạo mô hình. 
             # Trong trường hợp này, nó được sử dụng để lưu thông tin như địa chỉ của tệp log và các cài đặt khác.
-
+            start_epoch = checkpoint.get("epoch", 0)  # Doan Ngoc Cuong code
+            if config.logger is not None:
+                config.logger.info(f"Successfully loaded pretrained model from {pretrained_weight}.")
 
         except:
             start_epoch = 0
@@ -172,7 +174,13 @@ def train_worker(world_rank, world_size, nodes_size, args):
                         if best_metric is None or best_metric > cur_metric:
                             best_metric = cur_metric
                             best_net = epoch_net # epoch_net: mô hình mạng nơ-ron sau mỗi epoch huấn luyện.
+                            best_epoch = epoch # update best epoch 
+
                             current_pytorch_model_path = os.path.join(config.model_dir, "best_model.pkl")
+                            # Update model path to include best_epoch and best_metric in the name - Doan Ngoc Cuong code
+                            model_filename = f"best_model_epoch{best_epoch}_valbest_metric{best_metric:.4f}.pkl"
+                            current_pytorch_model_path = os.path.join(config.model_dir, model_filename)
+    
                             current_onnx_model_path = os.path.join(config.model_dir, "train.onnx")
                             utility.save_model(
                                 config,
@@ -196,12 +204,12 @@ def train_worker(world_rank, world_size, nodes_size, args):
 2024-01-05 05:57:44,788 INFO    : Val_net_ema/Metric  1 in this epoch: [NME nan, FR nan, AUC nan]
                          
                             '''
-                            # hàm save_model được define trong lib/utility.py để lưu model
+                            # hàm save_model được define trong lib/utility.py để lưu model 
                             # Trong đó có config.logger.info("Epoch: %d/%d, model saved in this epoch" % (epoch, config.max_epoch))
                             config.logger.info(f"Best model is saved as {current_pytorch_model_path}")
 
-                            # Sau khi tìm được model tốt nhất và trước khi kết thúc quá trình training hoặc validation
-                            # model_checkpoint_path = "best_model.pth"  # Thay thế với đường dẫn tới model của bạn
+                            # Log, push best model to wandb 
+                            # Doan Ngoc Cuong code
                             artifact = wandb.Artifact('ADNetSTARLoss_bestmodel', type='model') # Tạo 1 đối tượng artifact với tên, type
                             artifact.add_file(current_pytorch_model_path) # Thêm file best_model vào artifact
                             wandb.log_artifact(artifact) # Push artifact lên wandb
@@ -212,14 +220,17 @@ def train_worker(world_rank, world_size, nodes_size, args):
                         
                         # Trong hàm validation sau khi đã có được các metrics
                         # wandb.log({f"Val/Best_Metric at epoch {config.key_metric_index}": best_metric})
+                        # Doan Ngoc Cuong log
                         wandb.log({"Val/Best_Metric at epoch {:03d}".format(config.key_metric_index): best_metric})
 
                     eval_time.update(time.time() - eval_start_time)
 
-                # saving model (Doan Ngoc Cuong: when epcoh đạt max hoặc...)
-                # Đoạn trên thì save best model và Cuong đã thêm load best model to wandb
-                # ở trên để 'best_net' còn ở dưới để 'net', sự ko đồng bộ này ảnh hưởng đến việc xài pretrained_model
 
+                # Đoạn trên thì save best model và Cuong đã thêm load best model to wandb
+                # ở trên để 'best_net' còn ở dưới để 'net', sự ko đồng bộ này mình nghĩ sẽ ảnh hưởng đến việc xài pretrained_model
+                # Nhưng ko, vì cả 2 cái đều chỉ là tham số được gọi vào trong hàm utility.save_model()
+                
+                # saving model (Doan Ngoc Cuong: when epcoh đạt max hoặc...)
                 if epoch == config.max_epoch and world_rank == 0:
                     current_pytorch_model_path = os.path.join(config.model_dir, "last_model.pkl")
                     # current_onnx_model_path = os.path.join(config.model_dir, "model_epoch_%s.onnx" % epoch)
@@ -232,11 +243,10 @@ def train_worker(world_rank, world_size, nodes_size, args):
                         scheduler,
                         current_pytorch_model_path)
                     
-                    # Ko log model cuối cùng vì model cuối cùng sẽ được log ở bước validation
+                    # Tạm thời ko log last_model.pkl lên wandb
                     # artifact = wandb.Artifact('ADNetSTARLoss_bestmodel', type='model') # Tạo 1 đối tượng artifact với tên, type
                     # artifact.add_file(current_pytorch_model_path) # Thêm file best_model vào artifact
                     # wandb.log_artifact(artifact) # Push artifact lên wandb
-
 
                 if world_size > 1:
                     torch.distributed.barrier()

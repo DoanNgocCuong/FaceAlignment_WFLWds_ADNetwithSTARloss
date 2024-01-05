@@ -318,7 +318,7 @@ def forward_backward(config, train_loader, net_module, net, net_ema, criterions,
                 # cần chuyển các giá trị loss tương ứng vào trong hàm wandb.log như một dictionary
                 # Trước hàm backward, sau khi tính toán được losses
                 losses_dict = {f"L{i}_Train": loss for i, loss in enumerate(losses)}
-                losses_dict["Average STARLoss_v2 Trai(sum/len)"] = sum(losses) / len(losses) # wandb.log({"Average STARLoss_v2 sum/len": sum(losses) / len(losses)})
+                losses_dict["Average STARLoss_v2 Train(sum/len)"] = sum(losses) / len(losses) # wandb.log({"Average STARLoss_v2 sum/len": sum(losses) / len(losses)})
                 wandb.log(losses_dict) # mỗi loss L0, L1, L2, ... sẽ được log riêng biệt và có thể được theo dõi qua từng iteration trên giao diện
                 # mô hình của bạn được thiết kế để dự đoán nhiều điểm đặc trưng trên khuôn mặt (ví dụ: góc của mắt, đỉnh của mũi, góc của miệng, v.v.), 
                 # thì mỗi Lx có thể đại diện cho loss của từng điểm đặc trưng đó. 

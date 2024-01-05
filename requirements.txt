@@ -1,2 +1,3 @@
 wandb
-tensorboardX
+tensorboardX  # for !python main.py
+gradio # for !python demo.py

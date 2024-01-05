@@ -248,6 +248,7 @@ if __name__ == '__main__':
     # could be downloaded here: https://drive.google.com/file/d/1aOx0wYEZUfBndYy_8IYszLPG_D2fhxrT/view
     # model_path = '/content/WFLW_STARLoss_NME_4_02_FR_2_32_AUC_0_605.pkl'  # 200 epochs at github STAR: https://github.com/zhenglinzhou/star
     model_path = '/path/to/WFLW_STARLoss_NME_4_02_FR_2_32_AUC_0_605.pkl'
+    model_path = '/content/artifacts/ADNetSTARLoss_bestmodel:v0/best_model.pkl'
 
     device_ids = '0'
     device_ids = list(map(int, device_ids.split(",")))
@@ -257,7 +258,7 @@ if __name__ == '__main__':
     # image_draw: draw the detected facial landmarks on image
     # results:    a list of detected facial landmarks
     face_file_path = '/path/to/face/image/bald_guys.jpg'
-    face_file_path = '/content/MinhTuan.jpg'
+    face_file_path = '/content/doquanminh_1.jpg'
     image = cv2.imread(face_file_path)
     image_draw, results = process(image)
 
@@ -265,6 +266,26 @@ if __name__ == '__main__':
     img = cv2.cvtColor(image_draw, cv2.COLOR_BGR2RGB)
     plt.imshow(img)
     plt.show()
+
+    # save - Doan Ngoc Cuong code 
+    # Định nghĩa đường dẫn lưu ảnh và file kết quả
+    save_folder = "/content/wandb"
+    save_image_path = os.path.join(save_folder, 'output_image.jpg') # đuôi đúng dạng
+    save_results_path = os.path.join(save_folder, 'landmarks.txt')
+
+    # Lưu ảnh đã vẽ
+    cv2.imwrite(save_image_path, cv2.cvtColor(image_draw, cv2.COLOR_RGB2BGR))  # Chuyển từ RGB sang BGR khi lưu với OpenCV
+
+    # Mở file để ghi kết quả landmarks
+    with open(save_results_path, 'w') as f:
+        for landmarks in results:
+            for idx, point in enumerate(landmarks):
+                # Ghi mỗi landmark xuống file với định dạng "index x y"
+                f.write(f"{idx} {point[0]} {point[1]}\n")
+
+    print(f"Image saved to {save_image_path}")
+    print(f"Landmarks saved to {save_results_path}")
+
 
     # demo
     # interface = gr.Interface(fn=process, inputs="image", outputs="image")

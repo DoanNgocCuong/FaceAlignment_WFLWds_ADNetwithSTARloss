@@ -125,7 +125,8 @@ class STARLoss(nn.Module):
         # TODO: GPU-based eigen-decomposition
         # https://github.com/pytorch/pytorch/issues/60537
         _covars = covars.view(bs * npoints, 2, 2).cpu()
-        evalues, evectors = _covars.symeig(eigenvectors=True)  # evalues [bs * 68, 2], evectors [bs * 68, 2, 2]
+        # evalues, evectors = _covars.symeig(eigenvectors=True)  # evalues [bs * 68, 2], evectors [bs * 68, 2, 2]
+        evalues, evectors = torch.linalg.eigh(covars, UPLO='L') # Doan Ngoc Cuong fix
         evalues = evalues.view(bs, npoints, 2).to(heatmap)
         evectors = evectors.view(bs, npoints, 2, 2).to(heatmap)
 

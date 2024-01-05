@@ -174,6 +174,12 @@ def train_worker(world_rank, world_size, nodes_size, args):
                             # Trong đó có config.logger.info("Epoch: %d/%d, model saved in this epoch" % (epoch, config.max_epoch))
                             config.logger.info("Best model is saved as {current_pytorch_model_path}")
 
+                            # Sau khi tìm được model tốt nhất và trước khi kết thúc quá trình training hoặc validation
+                            # model_checkpoint_path = "best_model.pth"  # Thay thế với đường dẫn tới model của bạn
+                            artifact = wandb.Artifact('ADNetSTARLoss_bestmodel', type='model') # Tạo 1 đối tượng artifact với tên, type
+                            artifact.add_file(current_pytorch_model_path) # Thêm file best_model vào artifact
+                            wandb.log_artifact(artifact) # Push artifact lên wandb
+
                     if best_metric is not None:
                         config.logger.info(
                             "Val/Best_Metric%03d in this epoch: %.6f" % (config.key_metric_index, best_metric))
@@ -199,11 +205,10 @@ def train_worker(world_rank, world_size, nodes_size, args):
                         scheduler,
                         current_pytorch_model_path)
                     
-                    # Sau khi tìm được model tốt nhất và trước khi kết thúc quá trình training hoặc validation
-                    # model_checkpoint_path = "best_model.pth"  # Thay thế với đường dẫn tới model của bạn
-                    artifact = wandb.Artifact('ADNetSTARLoss_bestmodel', type='model') # Tạo 1 đối tượng artifact với tên, type
-                    artifact.add_file(current_pytorch_model_path) # Thêm file best_model vào artifact
-                    wandb.log_artifact(artifact) # Push artifact lên wandb
+                    # Ko log model cuối cùng vì model cuối cùng sẽ được log ở bước validation
+                    # artifact = wandb.Artifact('ADNetSTARLoss_bestmodel', type='model') # Tạo 1 đối tượng artifact với tên, type
+                    # artifact.add_file(current_pytorch_model_path) # Thêm file best_model vào artifact
+                    # wandb.log_artifact(artifact) # Push artifact lên wandb
 
 
                 if world_size > 1:

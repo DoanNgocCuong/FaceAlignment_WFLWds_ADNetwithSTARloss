@@ -45,7 +45,8 @@ class Distribution(object):
         self.covars = self.get_covariance_matrix(self.heatmaps, self.mean)
 
         _covars = self.covars.view(batch * npoints, 2, 2).cpu()
-        evalues, evectors = _covars.symeig(eigenvectors=True)
+        # evalues, evectors = _covars.symeig(eigenvectors=True)
+        evalues, evectors = torch.linalg.eigh(covars, UPLO='L')  # Doan Ngoc Cuong fix
         # eigenvalues [batch_size x 68 x 2]
         self.evalues = evalues.view(batch, npoints, 2).to(heatmaps)
         # eignvectors [batch_size x 68 x 2 x 2]

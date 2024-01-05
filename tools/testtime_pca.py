@@ -92,7 +92,8 @@ class TestTimePCA(nn.Module):
 
         # eigenvalues [batch_size * 68, 2] , eigenvectors [batch_size * 68, 2, 2]
         covars = covars.view(batch * npoints, 2, 2).cpu()
-        evalues, evectors = covars.symeig(eigenvectors=True)
+        # evalues, evectors = covars.symeig(eigenvectors=True)
+        evalues, evectors = torch.linalg.eigh(covars, UPLO='L') # Doan Ngoc Cuong fix
         evalues = evalues.view(batch, npoints, 2)
         evectors = evectors.view(batch, npoints, 2, 2)
         means = means.cpu()

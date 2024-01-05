@@ -2,6 +2,10 @@ import argparse
 from trainer import train
 from tester import test
 
+# Khởi tạo wandb
+import wandb # NameError: name 'wandb' is not defined
+wandb.login(key = "c8767797aae76cbcd389ff29929ace1ac3021161")    # key's DoanNgocCuong
+wandb.init(project = "FaceAlignment_ADNetwithSTARloss", entity="doanngoccuong_nh")
 
 def add_data_options(parser):
     group = parser.add_argument_group("dataset")
@@ -54,13 +58,30 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    print(
-        "mode is %s, config_name is %s, pretrained_weight is %s, image_dir is %s, annot_dir is %s, device_ids is %s" % (
-            args.mode, args.config_name, args.pretrained_weight, args.image_dir, args.annot_dir, args.device_ids))
-    args.device_ids = list(map(int, args.device_ids.split(",")))
-    if args.mode == "train":
-        train(args)
-    elif args.mode == "test":
-        test(args)
-    else:
-        print("unknown running mode")
+    # `try...except...finally` (finally: thực thi một đoạn mã không kể đến việc trước đó có xảy ra ngoại lệ hay không)
+    # print(
+    #     "mode is %s, config_name is %s, pretrained_weight is %s, image_dir is %s, annot_dir is %s, device_ids is %s" % (
+    #         args.mode, args.config_name, args.pretrained_weight, args.image_dir, args.annot_dir, args.device_ids))
+    # args.device_ids = list(map(int, args.device_ids.split(",")))
+    # if args.mode == "train":
+    #     train(args)
+    # elif args.mode == "test":
+    #     test(args)
+    # else:
+    #     print("unknown running mode")
+    try:
+        print(
+            "mode is %s, config_name is %s, pretrained_weight is %s, image_dir is %s, annot_dir is %s, device_ids is %s" % (
+                args.mode, args.config_name, args.pretrained_weight, args.image_dir, args.annot_dir, args.device_ids))
+        args.device_ids = list(map(int, args.device_ids.split(",")))
+        if args.mode == "train":
+            train(args)
+        elif args.mode == "test":
+            test(args)
+        else:
+            print("unknown running mode")
+    except Exception as e:
+        print(f"Đã xảy ra lỗi: {e}")
+        # Xử lý lỗi nếu cần
+    finally:
+        wandb.finish()  # Đảm bảo gọi wandb.finish() khi kết thúc hoặc khi có lỗi

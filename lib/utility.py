@@ -4,6 +4,7 @@ import time
 import torch
 import numpy as np
 from tqdm import tqdm
+import wandb # import trong mai.py rồi vẫn phải ở đây
 
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, DistributedSampler
@@ -281,7 +282,23 @@ def forward_backward(config, train_loader, net_module, net, net_ema, criterions,
 
         # loss
         losses, sum_loss = compute_loss(config, criterions, output, labels, heatmaps, landmarks)
-        ave_losses = list(map(sum, zip(ave_losses, losses)))
+        ave_losses = list(map(sum, zip(ave_losses, losses))) 
+        # ave_losses chứa giá trị trung bình cộng tích lũy của loss từ đầu epoch đến thời điểm hiện tại.
+
+        # Log các chỉ số loss với wandb - bug: NameError: name 'wandb' is not defined
+        # wandb.log({"Average Loss sum/len": sum(losses) / len(losses), "Iteration": iter})
+        # wandb.log({"Average STARLoss_v2 sum/len": sum(losses) / len(losses)})
+        # giá trị trung bình của loss trong iteration hiện tại, không phải là trung bình cộng tích lũy.
+        # Điều này hữu ích nếu bạn muốn theo dõi sự thay đổi và biến động của loss sau mỗi iteration một cách chi tiết hơn.
+
+        # Log toàn bộ các chỉ số L1, L2, L3, ... lên wandb, 
+        # cần chuyển các giá trị loss tương ứng vào trong hàm wandb.log như một dictionary
+        # Trước hàm backward, sau khi tính toán được losses
+        losses_dict = {f"L{i}_Train": loss for i, loss in enumerate(losses)}
+        losses_dict["Average STARLoss_v2 Trai(sum/len)"] = sum(losses) / len(losses) # wandb.log({"Average STARLoss_v2 sum/len": sum(losses) / len(losses)})
+        wandb.log(losses_dict) # mỗi loss L0, L1, L2, ... sẽ được log riêng biệt và có thể được theo dõi qua từng iteration trên giao diện
+        # mô hình của bạn được thiết kế để dự đoán nhiều điểm đặc trưng trên khuôn mặt (ví dụ: góc của mắt, đỉnh của mũi, góc của miệng, v.v.), 
+        # thì mỗi Lx có thể đại diện cho loss của từng điểm đặc trưng đó. 
 
         # backward
         optimizer.zero_grad()
@@ -299,9 +316,9 @@ def forward_backward(config, train_loader, net_module, net, net_ema, criterions,
         last_time = convert_secs2time(train_model_time.avg * (iter_num - iter - 1), True)
         if iter % config.display_iteration == 0 or iter + 1 == len(train_loader):
             if config.logger is not None:
-                losses_str = ' Average Loss: {:.6f}'.format(sum(losses) / len(losses))
+                losses_str = ' Average Loss: {:.6f}'.format(sum(losses) / len(losses))  # giá trị trung bình của các loss cho mỗi label/task trong iteration hiện tại 
                 for k, loss in enumerate(losses):
-                    losses_str += ', L{}: {:.3f}'.format(k, loss)
+                    losses_str += ', L{}: {:.3f}'.format(k, loss)  # losses_str được tạo ra để hiển thị các giá trị loss cho từng label/task (L0, L1, L2, v.v.)
                 config.logger.info(
                     ' -->>[{:03d}/{:03d}][{:03d}/{:03d}]'.format(epoch, config.max_epoch, iter, iter_num) \
                     + last_time + losses_str)

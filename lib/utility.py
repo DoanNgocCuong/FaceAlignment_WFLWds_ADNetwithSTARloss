@@ -321,7 +321,11 @@ def forward_backward(config, train_loader, net_module, net, net_ema, criterions,
                 losses_dict["Average STARLoss_v2 Train(sum/len)"] = sum(losses) / len(losses) # wandb.log({"Average STARLoss_v2 sum/len": sum(losses) / len(losses)})
                 wandb.log(losses_dict) # mỗi loss L0, L1, L2, ... sẽ được log riêng biệt và có thể được theo dõi qua từng iteration trên giao diện
                 # mô hình của bạn được thiết kế để dự đoán nhiều điểm đặc trưng trên khuôn mặt (ví dụ: góc của mắt, đỉnh của mũi, góc của miệng, v.v.), 
-                # thì mỗi Lx có thể đại diện cho loss của từng điểm đặc trưng đó. 
+                # thì mỗi Lx có thể đại diện cho loss của từng điểm đặc trưng đó.  
+
+                # Tên này  'Average STARLoss_v2 Train(sum/len)' SẼ LÀ #Average... được lưu trong Chart tên Train
+                # TRONG CHART TÊN TRAIN, LẠI CÓ TÊN ĐỒ THỊ LÀ Average STARLoss_v2 Train(sum (ko đủ chỗ) và đường màu sắc với tag Average STARLoss_v2 Train(sum/len)
+                # tag này ko đổi được. 
 
     epoch_end_time = time.time()
     epoch_total_time = epoch_end_time - epoch_start_time

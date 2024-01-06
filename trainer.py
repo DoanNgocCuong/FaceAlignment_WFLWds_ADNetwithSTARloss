@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -171,6 +170,7 @@ def train_worker(world_rank, world_size, nodes_size, args):
 
                         # update best model.
                         cur_metric = metrics[config.key_metric_index][0]
+                        wandb.log({"Cur_Metric}": cur_metric})
                         if best_metric is None or best_metric > cur_metric:
                             best_metric = cur_metric
                             best_net = epoch_net # epoch_net: mô hình mạng nơ-ron sau mỗi epoch huấn luyện.
@@ -217,11 +217,14 @@ def train_worker(world_rank, world_size, nodes_size, args):
                     if best_metric is not None:
                         config.logger.info(
                             "Val/Best_Metric at epoch %03d in this epoch: %.6f" % (config.key_metric_index, best_metric))
-                        
+                        wandb.log({"Val/Best_Metric}": best_metric})
+
                         # Trong hàm validation sau khi đã có được các metrics
                         # wandb.log({f"Val/Best_Metric at epoch {config.key_metric_index}": best_metric})
+                        # NÓ TẠO RA Ở MỖI BEST EPOCH 1 BIỂU ĐỒ VỚI TAG # Val/Best_Metric at epoch 003, Val/Best_Metric at epoch 004, ...
+                        # nên ko thành biểu đồ được
                         # Doan Ngoc Cuong log
-                        wandb.log({"Val/Best_Metric at epoch {:03d}".format(config.key_metric_index): best_metric})
+                        # wandb.log({"Val/Best_Metric at epoch {:03d}".format(config.key_metric_index): best_metric})
 
                     eval_time.update(time.time() - eval_start_time)
 
